@@ -13,14 +13,16 @@
 # on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
-#
+# 获取脚本路径
 script=${BASH_SOURCE[0]}
 #if [ $script == $0 ]; then
 #  echo "ERROR: You must source this script"
 #  exit 2
 #fi
 full_script=$(readlink -f $script)
+#脚本名:create_sdaccel_afi.sh
 script_name=$(basename $full_script)
+#目录名
 script_dir=$(dirname $full_script)
 
 debug=0
@@ -117,9 +119,10 @@ else
     echo "Error: File '$xclbin' is not found"
     exit 1
 fi
-
 stripped_xclbin=$(basename $xclbin)
+#ext_xclbin 扩展名
 ext_xclbin=${stripped_xclbin##*.}
+#stripped_xclbin: 名字，除了扩展名.xclbin
 stripped_xclbin=${stripped_xclbin%.*}
 echo $stripped_xclbin
  
@@ -183,6 +186,7 @@ timestamp=$(date +"%y_%m_%d-%H%M%S")
 
 #STEP 1
 #Strip XCLBIN to get DCP for ingestion
+#从XCLBIN里抽取DCP和XML，XML
 $XILINX_SDX/runtime/bin/xclbinsplit -o ${timestamp} $xclbin
 if [[ -e "${timestamp}-primary.bit" ]]
 then
@@ -206,10 +210,12 @@ then
 fi
 
 mkdir to_aws
+#复制DCP到aws目录下
 cp ${timestamp}-primary.bit to_aws/${timestamp}_SH_CL_routed.dcp
 
 #STEP 2
 #Create Manifest file
+#生成Manifest file
 strategy=DEFAULT
 hdk_version=1.3.2
 #FIXME hdk_version=$(grep 'HDK_VERSION' $HDK_DIR/hdk_version.txt | sed 's/=/ /g' | awk '{print $2}')
@@ -273,6 +279,7 @@ cp $FILENAME to_aws/$FILENAME
 
 #STEP 3
 #Prepare ingestion
+#打包
 tar -cf ${timestamp}_Developer_SDAccel_Kernel.tar to_aws/${timestamp}_SH_CL_routed.dcp to_aws/${timestamp}_manifest.txt
 
 
@@ -296,4 +303,7 @@ echo ${timestamp}_agfi_id.txt
 
 #STEP 6
 #Create .awsxclbin
+#-b/--bitstream        Add bitstream
+#-m/--metadata         Add metadata (XML)
+#-n/--binaryheader     Add binary header file
 $XILINX_SDX/runtime/bin/xclbincat -b ${timestamp}_agfi_id.txt -m ${timestamp}-xclbin.xml -n header.bin -o ${awsxclbin}.awsxclbin
